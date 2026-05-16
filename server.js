@@ -1,20 +1,18 @@
-const express = require("express");
-const OpenAI = require("openai");
+import express from "express";
+import OpenAI from "openai";
 
 const app = express();
 app.use(express.json());
 
-// ✅ OpenAI
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// ✅ STRONA
 app.get("/", (req, res) => {
   res.send(`
     <h2>🤖 AI Chat</h2>
 
-    <input id="msg" placeholder="Napisz coś..." style="padding:10px;width:300px;" />
+    <input id="msg" placeholder="Napisz coś..." />
     <button onclick="send()">Wyślij</button>
 
     <div id="chat"></div>
@@ -30,7 +28,7 @@ app.get("/", (req, res) => {
 
         const res = await fetch("/chat", {
           method: "POST",
-          headers: {"Content-Type": "application/json"},
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message })
         });
 
@@ -44,7 +42,6 @@ app.get("/", (req, res) => {
   `);
 });
 
-// ✅ AI endpoint
 app.post("/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -59,13 +56,12 @@ app.post("/chat", async (req, res) => {
 
     res.json({ reply });
 
-  } catch (err) {
-    console.log(err);
+  } catch (e) {
+    console.log(e);
     res.json({ reply: "Błąd AI 💥" });
   }
 });
 
-// ✅ PORT
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
