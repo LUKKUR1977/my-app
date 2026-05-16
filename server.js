@@ -5,6 +5,7 @@ app.use(express.json());
 
 let history = [];
 
+// ✅ smart AI
 function smartAI(message) {
   const msg = message.toLowerCase();
 
@@ -12,33 +13,120 @@ function smartAI(message) {
   if (msg.includes("cześć")) return "Hej 👋";
   if (msg.includes("jak się masz")) return "Dobrze 😎";
 
-  if (history.length > 3) {
+  if (history.length > 5) {
     return "Pamiętam rozmowę 👀: " + message;
   }
 
-  return "Rozumiem: " + message;
+  return "Myślę nad: " + message;
 }
 
+// ✅ UI PRO
 app.get("/", (req, res) => {
   res.send(`
   <html>
-  <body style="background:#343541;color:white;font-family:Arial;margin:0;">
+  <head>
+    <style>
+      body {
+        margin:0;
+        font-family:Arial;
+        background:#343541;
+        color:white;
+        display:flex;
+      }
 
-    <div id="messages" style="height:90vh;overflow:auto;padding:20px;"></div>
+      #sidebar {
+        width:200px;
+        background:#202123;
+        padding:15px;
+      }
 
-    <div style="display:flex;padding:10px;background:#40414f;">
-      <input id="msg" style="flex:1;padding:10px;" />
-      <button onclick="send()">Wyślij</button>
+      #chat {
+        flex:1;
+        display:flex;
+        flex-direction:column;
+        height:100vh;
+      }
+
+      #messages {
+        flex:1;
+        overflow-y:auto;
+        padding:20px;
+      }
+
+      .msg {
+        margin-bottom:10px;
+        padding:10px;
+        border-radius:8px;
+        max-width:70%;
+      }
+
+      .user {
+        background:#3b82f6;
+        align-self:flex-end;
+      }
+
+      .ai {
+        background:#444654;
+        align-self:flex-start;
+      }
+
+      #inputBox {
+        display:flex;
+        padding:10px;
+        background:#40414f;
+      }
+
+      input {
+        flex:1;
+        padding:10px;
+        border:none;
+        border-radius:5px;
+      }
+
+      button {
+        margin-left:10px;
+        padding:10px;
+        background:#19c37d;
+        border:none;
+        color:white;
+        border-radius:5px;
+        cursor:pointer;
+      }
+    </style>
+  </head>
+
+  <body>
+
+    <div id="sidebar">
+      <h3>💬 Chat</h3>
+      <p>Nowa rozmowa</p>
+    </div>
+
+    <div id="chat">
+
+      <div id="messages"></div>
+
+      <div id="inputBox">
+        <input id="msg" placeholder="Napisz wiadomość..." />
+        <button onclick="send()">Wyślij</button>
+      </div>
+
     </div>
 
     <script>
       async function send() {
         const input = document.getElementById("msg");
-        const messages = document.getElementById("messages");
+        const box = document.getElementById("messages");
 
         const text = input.value;
 
-        messages.innerHTML += "<p><b>Ty:</b> " + text + "</p>";
+        box.innerHTML += '<div class="msg user">' + text + '</div>';
+
+        // ✅ animacja pisania
+        const loading = document.createElement("div");
+        loading.className = "msg ai";
+        loading.innerText = "🤖 pisze...";
+        box.appendChild(loading);
 
         const res = await fetch("/chat", {
           method: "POST",
@@ -48,15 +136,18 @@ app.get("/", (req, res) => {
 
         const data = await res.json();
 
-        messages.innerHTML += "<p><b>AI:</b> " + data.reply + "</p>";
+        loading.remove();
+
+        box.innerHTML += '<div class="msg ai">' + data.reply + '</div>';
 
         input.value = "";
-        messages.scrollTop = messages.scrollHeight;
+        box.scrollTop = box.scrollHeight;
       }
 
       document.addEventListener("keydown", e => {
         if (e.key === "Enter") send();
       });
+
     </script>
 
   </body>
@@ -64,6 +155,7 @@ app.get("/", (req, res) => {
   `);
 });
 
+// ✅ backend
 app.post("/chat", (req, res) => {
   const { message } = req.body;
 
@@ -75,5 +167,4 @@ app.post("/chat", (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT);
