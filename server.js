@@ -1,8 +1,9 @@
-import express from "express";
+const express = require("express");
 
 const app = express();
 app.use(express.json());
 
+// ✅ darmowe AI
 function fakeAI(message) {
   message = message.toLowerCase();
 
@@ -13,8 +14,9 @@ function fakeAI(message) {
   return "Zrozumiałem: " + message;
 }
 
+// ✅ UI
 app.get("/", (req, res) => {
-  res.send(\`
+  res.send(`
   <html>
   <body style="background:#343541;color:white;font-family:Arial;">
     <h2>🤖 Chat</h2>
@@ -47,13 +49,18 @@ app.get("/", (req, res) => {
 
   </body>
   </html>
-  \`);
+  `);
 });
 
+// ✅ backend
 app.post("/chat", (req, res) => {
   const reply = fakeAI(req.body.message);
   res.json({ reply });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT);
+
+app.listen(PORT, () => {
+  console.log("🚀 Server działa:", PORT);
+});
+
