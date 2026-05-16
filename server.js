@@ -12,6 +12,8 @@ function smartAI(message) {
   if (msg.includes("kim jesteś")) return "Jestem Twoim AI 🤖";
   if (msg.includes("cześć")) return "Hej 👋";
   if (msg.includes("jak się masz")) return "Dobrze 😎";
+  if (msg.includes("co robisz")) return "Rozmawiam z Tobą 😄";
+  if (msg.includes("ile masz lat")) return "Nie mam wieku 🤖";
 
   if (history.length > 5) {
     return "Pamiętam rozmowę 👀: " + message;
@@ -20,7 +22,7 @@ function smartAI(message) {
   return "Myślę nad: " + message;
 }
 
-// ✅ UI
+// ✅ UI FULL CHATGPT STYLE + ZAPIS
 app.get("/", (req, res) => {
   res.send(`
   <html>
@@ -33,20 +35,17 @@ app.get("/", (req, res) => {
         color:white;
         display:flex;
       }
-
       #sidebar {
         width:200px;
         background:#202123;
         padding:15px;
       }
-
       #chat {
         flex:1;
         display:flex;
         flex-direction:column;
         height:100vh;
       }
-
       #messages {
         flex:1;
         overflow-y:auto;
@@ -54,37 +53,32 @@ app.get("/", (req, res) => {
         display:flex;
         flex-direction:column;
       }
-
       .msg {
         margin-bottom:10px;
         padding:10px;
         border-radius:8px;
         max-width:70%;
       }
-
       .user {
         background:#3b82f6;
         align-self:flex-end;
       }
-
       .ai {
         background:#444654;
         align-self:flex-start;
       }
-
       #inputBox {
         display:flex;
         padding:10px;
         background:#40414f;
       }
-
       input {
         flex:1;
         padding:10px;
         border:none;
         border-radius:5px;
+        outline:none;
       }
-
       button {
         margin-left:10px;
         padding:10px;
@@ -101,25 +95,43 @@ app.get("/", (req, res) => {
 
     <div id="sidebar">
       <h3>💬 Chat</h3>
-      <p>Nowa rozmowa</p>
+      <button onclick="newChat()">Nowa rozmowa</button>
     </div>
 
     <div id="chat">
-
       <div id="messages"></div>
 
       <div id="inputBox">
         <input id="msg" placeholder="Napisz wiadomość..." />
         <button onclick="send()">Wyślij</button>
       </div>
-
     </div>
 
     <script>
+      const box = document.getElementById("messages");
+
+      // ✅ wczytaj zapis
+      function loadChat() {
+        const saved = localStorage.getItem("chat");
+        if (saved) {
+          box.innerHTML = saved;
+          box.scrollTop = box.scrollHeight;
+        }
+      }
+
+      // ✅ zapisz
+      function saveChat() {
+        localStorage.setItem("chat", box.innerHTML);
+      }
+
+      // ✅ nowa rozmowa
+      function newChat() {
+        box.innerHTML = "";
+        localStorage.removeItem("chat");
+      }
+
       async function send() {
         const input = document.getElementById("msg");
-        const box = document.getElementById("messages");
-
         const text = input.value;
 
         if (!text) return;
@@ -145,9 +157,11 @@ app.get("/", (req, res) => {
 
         input.value = "";
         box.scrollTop = box.scrollHeight;
+
+        saveChat();
       }
 
-      // ✅ ENTER DZIAŁA POPRAWNIE
+      // ✅ ENTER wysyła
       document.getElementById("msg").addEventListener("keydown", function(e) {
         if (e.key === "Enter") {
           e.preventDefault();
@@ -155,6 +169,7 @@ app.get("/", (req, res) => {
         }
       });
 
+      loadChat();
     </script>
 
   </body>
@@ -174,4 +189,7 @@ app.post("/chat", (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT);
+
+app.listen(PORT, () => {
+  console.log("🚀 SERVER:", PORT);
+});
