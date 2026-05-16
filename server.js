@@ -1,5 +1,5 @@
-import express from "express";
-import OpenAI from "openai";
+const express = require("express");
+const OpenAI = require("openai");
 
 const app = express();
 app.use(express.json());
@@ -9,15 +9,15 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// ✅ STRONA (frontend)
+// ✅ STRONA
 app.get("/", (req, res) => {
   res.send(`
     <h2>🤖 AI Chat</h2>
 
     <input id="msg" placeholder="Napisz coś..." style="padding:10px;width:300px;" />
-    <button onclick="send()" style="padding:10px;">Wyślij</button>
+    <button onclick="send()">Wyślij</button>
 
-    <div id="chat" style="margin-top:20px;"></div>
+    <div id="chat"></div>
 
     <script>
       async function send() {
@@ -30,9 +30,7 @@ app.get("/", (req, res) => {
 
         const res = await fetch("/chat", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: {"Content-Type": "application/json"},
           body: JSON.stringify({ message })
         });
 
@@ -46,7 +44,7 @@ app.get("/", (req, res) => {
   `);
 });
 
-// ✅ PRAWDZIWE AI
+// ✅ AI endpoint
 app.post("/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -61,8 +59,8 @@ app.post("/chat", async (req, res) => {
 
     res.json({ reply });
 
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    console.log(err);
     res.json({ reply: "Błąd AI 💥" });
   }
 });
@@ -71,5 +69,5 @@ app.post("/chat", async (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("🚀 Server działa:", PORT);
+  console.log("🚀 Server:", PORT);
 });
