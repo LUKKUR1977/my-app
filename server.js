@@ -4,85 +4,57 @@ import OpenAI from "openai";
 const app = express();
 app.use(express.json());
 
-// ✅ OpenAI
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// ✅ SAFE INIT (nie crashuje)
+let client;
+try {
+  client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+} catch (e) {
+  console.log("OpenAI init error:", e);
+}
 
-// ✅ STRONA (frontend)
+// ✅ TEST
 app.get("/", (req, res) => {
-  res.send(`
-    <html>
-    <head>
-      <title>AI Chat</title>
-      <style>
-        body { font-family: Arial; max-width: 600px; margin: auto; }
-        #chat { margin-top: 20px; }
-        input, button { padding: 10px; }
-      </style>
-    </head>
-    <body>
-
-      <h2>🤖 AI Chat</h2>
-
-      <input id="msg" placeholder="Napisz coś..." />
-      <button onclick="send()">Wyślij</button>
-
-      <div id="chat"></div>
-
-      <script>
-        async function send() {
-          const input = document.getElementById("msg");
-          const chat = document.getElementById("chat");
-
-          const message = input.value;
-
-          chat.innerHTML += "<p><b>Ty:</b> " + message + "</p>";
-
-          const res = await fetch("/chat", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({ message })
-          });
-
-          const data = await res.json();
-
-          chat.innerHTML += "<p><b>AI:</b> " + data.reply + "</p>";
-
-          input.value = "";
-        }
-      </script>
-
-    </body>
-    </html>
-  `);
+  res.send("✅ SERVER DZIAŁA + AI READY");
 });
 
-// ✅ PRAWDZIWE AI
+// ✅ CHAT
 app.post("/chat", async (req, res) => {
   try {
     const { message } = req.body;
+
+    if (!client) {
+      return res.json({ reply: "Brak API key" });
+    }
 
     const response = await client.responses.create({
       model: "gpt-4.1-mini",
       input: message,
     });
 
-    // ✅ NAJWAŻNIEJSZE — poprawne odczytanie odpowiedzi
     const reply = response.output_text || "Brak odpowiedzi";
 
     res.json({ reply });
 
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    console.log("CHAT ERROR:", err);
     res.json({ reply: "Błąd AI 💥" });
   }
 });
 
-// ✅ PORT
+// ✅ ważne — zapobiega crash
+process.on("uncaughtException", (err) => {
+  console.log("UNCAUGHT:", err);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.log("PROMISE ERROR:", err);
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("🚀 Server działa:", PORT);
+  console.log("🚀 START:", PORT);
 });
-``
+
