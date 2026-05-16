@@ -3,48 +3,60 @@ const express = require("express");
 const app = express();
 app.use(express.json());
 
-// ✅ darmowe AI
-function fakeAI(message) {
-  message = message.toLowerCase();
+let history = [];
 
-  if (message.includes("kim jesteś")) return "Jestem darmowym AI 🤖";
-  if (message.includes("cześć")) return "Siema 👋";
-  if (message.includes("jak się masz")) return "Dobrze 😎";
+function smartAI(message) {
+  const msg = message.toLowerCase();
 
-  return "Zrozumiałem: " + message;
+  if (msg.includes("kim jesteś")) return "Jestem Twoim AI 🤖";
+  if (msg.includes("cześć")) return "Hej 👋";
+  if (msg.includes("jak się masz")) return "Dobrze 😎";
+
+  if (history.length > 3) {
+    return "Pamiętam rozmowę 👀: " + message;
+  }
+
+  return "Rozumiem: " + message;
 }
 
-// ✅ UI
 app.get("/", (req, res) => {
   res.send(`
   <html>
-  <body style="background:#343541;color:white;font-family:Arial;">
-    <h2>🤖 Chat</h2>
+  <body style="background:#343541;color:white;font-family:Arial;margin:0;">
 
-    <div id="messages"></div>
+    <div id="messages" style="height:90vh;overflow:auto;padding:20px;"></div>
 
-    <input id="msg" style="width:80%" />
-    <button onclick="send()">Wyślij</button>
+    <div style="display:flex;padding:10px;background:#40414f;">
+      <input id="msg" style="flex:1;padding:10px;" />
+      <button onclick="send()">Wyślij</button>
+    </div>
 
     <script>
       async function send() {
         const input = document.getElementById("msg");
-        const msg = input.value;
+        const messages = document.getElementById("messages");
 
-        document.getElementById("messages").innerHTML += "<p>Ty: " + msg + "</p>";
+        const text = input.value;
+
+        messages.innerHTML += "<p><b>Ty:</b> " + text + "</p>";
 
         const res = await fetch("/chat", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({message: msg})
+          body: JSON.stringify({message:text})
         });
 
         const data = await res.json();
 
-        document.getElementById("messages").innerHTML += "<p>AI: " + data.reply + "</p>";
+        messages.innerHTML += "<p><b>AI:</b> " + data.reply + "</p>";
 
         input.value = "";
+        messages.scrollTop = messages.scrollHeight;
       }
+
+      document.addEventListener("keydown", e => {
+        if (e.key === "Enter") send();
+      });
     </script>
 
   </body>
@@ -52,15 +64,16 @@ app.get("/", (req, res) => {
   `);
 });
 
-// ✅ backend
 app.post("/chat", (req, res) => {
-  const reply = fakeAI(req.body.message);
+  const { message } = req.body;
+
+  history.push(message);
+
+  const reply = smartAI(message);
+
   res.json({ reply });
 });
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log("🚀 Server działa:", PORT);
-});
-
+app.listen(PORT);
