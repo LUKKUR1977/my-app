@@ -4,7 +4,7 @@ import OpenAI from "openai";
 const app = express();
 app.use(express.json());
 
-// ✅ SAFE INIT (nie crashuje)
+// ✅ SAFE INIT
 let client;
 try {
   client = new OpenAI({
@@ -14,18 +14,56 @@ try {
   console.log("OpenAI init error:", e);
 }
 
-// ✅ TEST
+// ✅ FRONTEND
 app.get("/", (req, res) => {
-  res.send("✅ SERVER DZIAŁA + AI READY");
+  res.send(`
+  <html>
+  <body style="font-family: Arial; max-width:600px; margin:auto;">
+    
+    <h2>🤖 AI Chat</h2>
+
+    <input id="msg" placeholder="Napisz coś..." style="padding:10px;width:70%;" />
+    <button onclick="send()" style="padding:10px;">Wyślij</button>
+
+    <div id="chat" style="margin-top:20px;"></div>
+
+    <script>
+      async function send() {
+        const input = document.getElementById("msg");
+        const chat = document.getElementById("chat");
+
+        const message = input.value;
+
+        chat.innerHTML += "<p><b>Ty:</b> " + message + "</p>";
+
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ message })
+        });
+
+        const data = await res.json();
+
+        chat.innerHTML += "<p><b>AI:</b> " + data.reply + "</p>";
+
+        chat.scrollTop = chat.scrollHeight;
+
+        input.value = "";
+      }
+    </script>
+
+  </body>
+  </html>
+  `);
 });
 
-// ✅ CHAT
+// ✅ AI CHAT
 app.post("/chat", async (req, res) => {
   try {
     const { message } = req.body;
 
     if (!client) {
-      return res.json({ reply: "Brak API key" });
+      return res.json({ reply: "Brak API key ❌" });
     }
 
     const response = await client.responses.create({
@@ -38,23 +76,17 @@ app.post("/chat", async (req, res) => {
     res.json({ reply });
 
   } catch (err) {
-    console.log("CHAT ERROR:", err);
+    console.log(err);
     res.json({ reply: "Błąd AI 💥" });
   }
 });
 
-// ✅ ważne — zapobiega crash
-process.on("uncaughtException", (err) => {
-  console.log("UNCAUGHT:", err);
-});
-
-process.on("unhandledRejection", (err) => {
-  console.log("PROMISE ERROR:", err);
-});
+// ✅ anty crash
+process.on("uncaughtException", err => console.log(err));
+process.on("unhandledRejection", err => console.log(err));
 
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("🚀 START:", PORT);
+  console.log("🚀 SERVER START:", PORT);
 });
-
