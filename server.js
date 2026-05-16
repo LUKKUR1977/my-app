@@ -4,44 +4,61 @@ import OpenAI from "openai";
 const app = express();
 app.use(express.json());
 
+// ✅ OpenAI
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// ✅ STRONA (frontend)
 app.get("/", (req, res) => {
   res.send(`
-    <h2>🤖 AI Chat</h2>
+    <html>
+    <head>
+      <title>AI Chat</title>
+      <style>
+        body { font-family: Arial; max-width: 600px; margin: auto; }
+        #chat { margin-top: 20px; }
+        input, button { padding: 10px; }
+      </style>
+    </head>
+    <body>
 
-    <input id="msg" placeholder="Napisz coś..." />
-    <button onclick="send()">Wyślij</button>
+      <h2>🤖 AI Chat</h2>
 
-    <div id="chat"></div>
+      <input id="msg" placeholder="Napisz coś..." />
+      <button onclick="send()">Wyślij</button>
 
-    <script>
-      async function send() {
-        const input = document.getElementById("msg");
-        const chat = document.getElementById("chat");
+      <div id="chat"></div>
 
-        const message = input.value;
+      <script>
+        async function send() {
+          const input = document.getElementById("msg");
+          const chat = document.getElementById("chat");
 
-        chat.innerHTML += "<p><b>Ty:</b> " + message + "</p>";
+          const message = input.value;
 
-        const res = await fetch("/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message })
-        });
+          chat.innerHTML += "<p><b>Ty:</b> " + message + "</p>";
 
-        const data = await res.json();
+          const res = await fetch("/chat", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ message })
+          });
 
-        chat.innerHTML += "<p><b>AI:</b> " + data.reply + "</p>";
+          const data = await res.json();
 
-        input.value = "";
-      }
-    </script>
+          chat.innerHTML += "<p><b>AI:</b> " + data.reply + "</p>";
+
+          input.value = "";
+        }
+      </script>
+
+    </body>
+    </html>
   `);
 });
 
+// ✅ PRAWDZIWE AI
 app.post("/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -51,19 +68,21 @@ app.post("/chat", async (req, res) => {
       input: message,
     });
 
-    const reply =
-      response.output?.[0]?.content?.[0]?.text || "Brak odpowiedzi";
+    // ✅ NAJWAŻNIEJSZE — poprawne odczytanie odpowiedzi
+    const reply = response.output_text || "Brak odpowiedzi";
 
     res.json({ reply });
 
-  } catch (e) {
-    console.log(e);
+  } catch (error) {
+    console.log(error);
     res.json({ reply: "Błąd AI 💥" });
   }
 });
 
+// ✅ PORT
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("🚀 Server:", PORT);
+  console.log("🚀 Server działa:", PORT);
 });
+``
