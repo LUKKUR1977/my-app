@@ -5,7 +5,7 @@ app.use(express.json());
 
 let history = [];
 
-// ✅ smart AI
+// ✅ LEPSZE AI
 function smartAI(message) {
   const msg = message.toLowerCase();
 
@@ -20,7 +20,7 @@ function smartAI(message) {
   return "Myślę nad: " + message;
 }
 
-// ✅ UI PRO
+// ✅ UI
 app.get("/", (req, res) => {
   res.send(`
   <html>
@@ -51,6 +51,8 @@ app.get("/", (req, res) => {
         flex:1;
         overflow-y:auto;
         padding:20px;
+        display:flex;
+        flex-direction:column;
       }
 
       .msg {
@@ -120,9 +122,10 @@ app.get("/", (req, res) => {
 
         const text = input.value;
 
+        if (!text) return;
+
         box.innerHTML += '<div class="msg user">' + text + '</div>';
 
-        // ✅ animacja pisania
         const loading = document.createElement("div");
         loading.className = "msg ai";
         loading.innerText = "🤖 pisze...";
@@ -144,8 +147,12 @@ app.get("/", (req, res) => {
         box.scrollTop = box.scrollHeight;
       }
 
-      document.addEventListener("keydown", e => {
-        if (e.key === "Enter") send();
+      // ✅ ENTER DZIAŁA POPRAWNIE
+      document.getElementById("msg").addEventListener("keydown", function(e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          send();
+        }
       });
 
     </script>
