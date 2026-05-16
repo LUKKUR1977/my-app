@@ -3,79 +3,57 @@ import express from "express";
 const app = express();
 app.use(express.json());
 
-// ✅ FRONT
+function fakeAI(message) {
+  message = message.toLowerCase();
+
+  if (message.includes("kim jesteś")) return "Jestem darmowym AI 🤖";
+  if (message.includes("cześć")) return "Siema 👋";
+  if (message.includes("jak się masz")) return "Dobrze 😎";
+
+  return "Zrozumiałem: " + message;
+}
+
 app.get("/", (req, res) => {
-  res.send(`
+  res.send(\`
   <html>
-  <body style="font-family: Arial; max-width:600px; margin:auto;">
-    <h2>🤖 AI Chat</h2>
-    <input id="msg" placeholder="Napisz coś..." style="padding:10px;width:70%;" />
+  <body style="background:#343541;color:white;font-family:Arial;">
+    <h2>🤖 Chat</h2>
+
+    <div id="messages"></div>
+
+    <input id="msg" style="width:80%" />
     <button onclick="send()">Wyślij</button>
-    <div id="chat"></div>
 
     <script>
       async function send() {
         const input = document.getElementById("msg");
-        const chat = document.getElementById("chat");
+        const msg = input.value;
 
-        const message = input.value;
-
-        chat.innerHTML += "<p><b>Ty:</b> " + message + "</p>";
+        document.getElementById("messages").innerHTML += "<p>Ty: " + msg + "</p>";
 
         const res = await fetch("/chat", {
           method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({ message })
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({message: msg})
         });
 
         const data = await res.json();
 
-        chat.innerHTML += "<p><b>AI:</b> " + data.reply + "</p>";
+        document.getElementById("messages").innerHTML += "<p>AI: " + data.reply + "</p>";
+
+        input.value = "";
       }
     </script>
+
   </body>
   </html>
-  `);
+  \`);
 });
 
-// ✅ CHAT (DEBUG VERSION)
-app.post("/chat", async (req, res) => {
-  try {
-    const { message } = req.body;
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + process.env.OPENAI_API_KEY
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: message }]
-      })
-    });
-
-    const data = await response.json();
-
-    console.log("OPENAI RESPONSE:", data); // 🔥 WAŻNE
-
-    if (data.error) {
-      return res.json({ reply: "ERROR: " + data.error.message });
-    }
-
-    const reply =
-      data.choices?.[0]?.message?.content || "Brak odpowiedzi";
-
-    res.json({ reply });
-
-  } catch (err) {
-    console.log("SERVER ERROR:", err);
-    res.json({ reply: "Błąd serwera 💥" });
-  }
+app.post("/chat", (req, res) => {
+  const reply = fakeAI(req.body.message);
+  res.json({ reply });
 });
 
 const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log("🚀 SERVER:", PORT);
-});
+app.listen(PORT);
