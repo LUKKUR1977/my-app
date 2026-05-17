@@ -3,236 +3,280 @@ const express = require("express");
 const app = express();
 app.use(express.json());
 
-// fallback
-function fallback(message) {
-  return "🤖 " + message;
+/* ==================== FAKE LOGIN DB ==================== */
+let users = []; // zapis w pamięci (prosto + za darmo)
+
+/* ==================== AI ==================== */
+function smartAI(message) {
+  const msg = message.toLowerCase();
+
+  if (msg.includes("godzina")) {
+    return "🕒 Jest: " + new Date().toLocaleTimeString();
+  }
+
+  if (msg.includes("data")) {
+    return "📅 Dziś: " + new Date().toLocaleDateString();
+  }
+
+  if (msg.includes("kim jesteś")) {
+    return "Jestem Twoim AI 🤖";
+  }
+
+  if (msg.includes("cześć")) {
+    return "Hej 👋";
+  }
+
+  return "Rozumiem: " + message;
 }
 
-// UI
+/* ==================== FRONT ==================== */
 app.get("/", (req, res) => {
-  res.send(`
-  <html>
-  <head>
-    <style>
-      body {
-        margin:0;
-        display:flex;
-        background:#343541;
-        color:white;
-        font-family:Arial;
-      }
+res.send(`
+<html>
+<head>
+<style>
+body {
+  margin:0;
+  display:flex;
+  background:#343541;
+  color:white;
+  font-family:Arial;
+}
 
-      #sidebar {
-        width:220px;
-        background:#202123;
-        padding:15px;
-      }
+/* LOGIN */
+#login {
+  margin:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
 
-      .chat-item {
-        padding:10px;
-        margin-bottom:5px;
-        background:#2a2b32;
-        border-radius:6px;
-        cursor:pointer;
-      }
+/* APP */
+#app {
+  display:none;
+  width:100%;
+}
 
-      .chat-item:hover {
-        background:#3a3b42;
-      }
+#sidebar {
+  width:220px;
+  background:#202123;
+  padding:15px;
+}
 
-      #chat {
-        flex:1;
-        display:flex;
-        flex-direction:column;
-        height:100vh;
-      }
+#chat {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+}
 
-      #messages {
-        flex:1;
-        overflow:auto;
-        padding:20px;
-        display:flex;
-        flex-direction:column;
-        gap:10px;
-      }
+#messages {
+  flex:1;
+  overflow:auto;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+}
 
-      .msg {
-        max-width:70%;
-        padding:12px;
-        border-radius:10px;
-      }
+.msg {
+  max-width:70%;
+  padding:10px;
+  margin-bottom:8px;
+  border-radius:8px;
+}
 
-      .user {
-        background:#3b82f6;
-        align-self:flex-end;
-      }
+.user {
+  background:#3b82f6;
+  align-self:flex-end;
+}
 
-      .ai {
-        background:#444654;
-      }
+.ai {
+  background:#444654;
+}
 
-      #inputBox {
-        display:flex;
-        padding:10px;
-        background:#40414f;
-      }
+.chat-item {
+  background:#2a2b32;
+  padding:8px;
+  margin-top:5px;
+  cursor:pointer;
+}
 
-      input {
-        flex:1;
-        padding:10px;
-        border-radius:6px;
-        border:none;
-      }
+#inputBox {
+  display:flex;
+  padding:10px;
+  background:#40414f;
+}
+</style>
+</head>
 
-      button {
-        margin-left:10px;
-        padding:10px;
-        background:#19c37d;
-        border:none;
-        color:white;
-        border-radius:6px;
-        cursor:pointer;
-      }
-    </style>
-  </head>
+<body>
 
-  <body>
+<div id="login">
+  <h2>🔐 Login</h2>
+  <input id="user" placeholder="Login"/>
+  <input id="pass" placeholder="Hasło" />
+  <button onclick="login()">Zaloguj</button>
+  <button onclick="register()">Rejestruj</button>
+</div>
 
-    <div id="sidebar">
-      <button onclick="createChat()">+ Nowy czat</button>
-      <div id="chatList"></div>
+<div id="app">
+
+  <div id="sidebar">
+    <button onclick="newChat()">+ Nowy czat</button>
+    <div id="chatList"></div>
+  </div>
+
+  <div id="chat">
+    <div id="messages"></div>
+
+    <div id="inputBox">
+      <input id="msg"/>
+      <button onclick="send()">Wyślij</button>
     </div>
+  </div>
 
-    <div id="chat">
-      <div id="messages"></div>
+</div>
 
-      <div id="inputBox">
-        <input id="msg" placeholder="Napisz..." />
-        <button onclick="send()">Wyślij</button>
-      </div>
-    </div>
+<script>
 
-    <script>
-      let chats = JSON.parse(localStorage.getItem("chats")) || [];
-      let currentChat = 0;
+let user = null;
+let chats = [];
+let current = 0;
 
-      const box = document.getElementById("messages");
-      const list = document.getElementById("chatList");
+const box = document.getElementById("messages");
 
-      function save() {
-        localStorage.setItem("chats", JSON.stringify(chats));
-      }
+/* ===== LOGIN ===== */
+async function login() {
+  const u = document.getElementById("user").value;
+  const p = document.getElementById("pass").value;
 
-      function renderChats() {
-        list.innerHTML = "";
+  const res = await fetch("/login", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({u,p})
+  });
 
-        chats.forEach((chat, i) => {
-          const el = document.createElement("div");
-          el.className = "chat-item";
-          el.innerText = "Czat " + (i+1);
-          el.onclick = () => {
-            currentChat = i;
-            renderMessages();
-          };
-          list.appendChild(el);
-        });
-      }
+  const data = await res.json();
 
-      function renderMessages() {
-        box.innerHTML = "";
+  if(data.ok){
+    user = u;
+    startApp();
+  } else alert("błąd");
+}
 
-        chats[currentChat].forEach(msg => {
-          box.innerHTML += '<div class="msg '+msg.type+'">'+msg.text+'</div>';
-        });
+async function register(){
+  const u = document.getElementById("user").value;
+  const p = document.getElementById("pass").value;
 
-        box.scrollTop = box.scrollHeight;
-      }
+  await fetch("/register", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({u,p})
+  });
 
-      function createChat() {
-        chats.push([]);
-        currentChat = chats.length - 1;
-        save();
-        renderChats();
-        renderMessages();
-      }
+  alert("zarejestrowano");
+}
 
-      async function send() {
-        const input = document.getElementById("msg");
-        const text = input.value;
+/* ===== APP ===== */
 
-        if (!text) return;
+function startApp(){
+  document.getElementById("login").style.display="none";
+  document.getElementById("app").style.display="flex";
 
-        chats[currentChat].push({type:"user", text});
-        renderMessages();
+  chats = JSON.parse(localStorage.getItem(user)) || [];
+  if(chats.length===0) newChat();
 
-        const loading = document.createElement("div");
-        loading.className = "msg ai";
-        loading.innerText = "🤖 pisze...";
-        box.appendChild(loading);
+  renderChats();
+  render();
+}
 
-        const res = await fetch("/chat", {
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({message:text})
-        });
+function save(){
+  localStorage.setItem(user, JSON.stringify(chats));
+}
 
-        const data = await res.json();
+function renderChats(){
+  const list = document.getElementById("chatList");
+  list.innerHTML="";
 
-        loading.remove();
+  chats.forEach((c,i)=>{
+    const el=document.createElement("div");
+    el.className="chat-item";
+    el.innerText="Czat "+(i+1);
+    el.onclick=()=>{
+      current=i;
+      render();
+    };
+    list.appendChild(el);
+  });
+}
 
-        chats[currentChat].push({type:"ai", text:data.reply});
-        renderMessages();
+function render(){
+  box.innerHTML="";
+  chats[current].forEach(m=>{
+    box.innerHTML+=\`<div class="msg \${m.t}">\${m.v}</div>\`;
+  });
+}
 
-        input.value = "";
-        save();
-      }
+function newChat(){
+  chats.push([]);
+  current=chats.length-1;
+  save();
+  renderChats();
+  render();
+}
 
-      document.getElementById("msg").addEventListener("keydown", e => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          send();
-        }
-      });
+/* ===== CHAT ===== */
 
-      if (chats.length === 0) createChat();
-      renderChats();
-      renderMessages();
-    </script>
+async function send(){
+  const input=document.getElementById("msg");
+  const text=input.value;
 
-  </body>
-  </html>
-  `);
+  if(!text) return;
+
+  chats[current].push({t:"user", v:text});
+  render();
+
+  const res = await fetch("/chat",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({message:text})
+  });
+
+  const data = await res.json();
+
+  chats[current].push({t:"ai", v:data.reply});
+  render();
+
+  input.value="";
+  save();
+}
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter") send();
 });
 
-// backend
-app.post("/chat", async (req, res) => {
-  const { message } = req.body;
+</script>
 
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method:"POST",
-      headers:{
-        "Authorization":"Bearer " + process.env.OPENROUTER_API_KEY,
-        "Content-Type":"application/json"
-      },
-      body: JSON.stringify({
-        model:"meta-llama/llama-3-8b-instruct",
-        messages:[{role:"user", content:message}]
-      })
-    });
+</body>
+</html>
+`);
+});
 
-    const data = await response.json();
+/* ==================== BACKEND ==================== */
 
-    if (data.error) return res.json({reply:fallback(message)});
+app.post("/register",(req,res)=>{
+  users.push(req.body);
+  res.json({ok:true});
+});
 
-    res.json({
-      reply: data.choices?.[0]?.message?.content || fallback(message)
-    });
+app.post("/login",(req,res)=>{
+  const found = users.find(x=>x.u===req.body.u && x.p===req.body.p);
+  res.json({ok:!!found});
+});
 
-  } catch {
-    res.json({reply:fallback(message)});
-  }
+app.post("/chat",(req,res)=>{
+  const reply = smartAI(req.body.message);
+  res.json({reply});
 });
 
 app.listen(process.env.PORT || 3000);
-
