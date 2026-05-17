@@ -3,12 +3,12 @@ const express = require("express");
 const app = express();
 app.use(express.json());
 
-// fallback
+// ✅ fallback AI
 function fallback(message) {
   return "🤖 " + message;
 }
 
-// UI PRO
+// ✅ FRONTEND (PRO UI)
 app.get("/", (req, res) => {
   res.send(`
   <html>
@@ -49,7 +49,6 @@ app.get("/", (req, res) => {
         padding:14px;
         border-radius:10px;
         font-size:15px;
-        line-height:1.4;
       }
 
       .user {
@@ -62,6 +61,27 @@ app.get("/", (req, res) => {
         align-self:flex-start;
       }
 
+      .fade {
+        opacity:0;
+        animation:fadeIn 0.4s forwards;
+      }
+
+      @keyframes fadeIn {
+        to { opacity:1; }
+      }
+
+      .typing::after {
+        content:"";
+        animation:dots 1.5s infinite;
+      }
+
+      @keyframes dots {
+        0% {content:"";}
+        33% {content:".";}
+        66% {content:"..";}
+        100% {content:"...";}
+      }
+
       #inputBox {
         display:flex;
         padding:15px;
@@ -71,9 +91,8 @@ app.get("/", (req, res) => {
       input {
         flex:1;
         padding:12px;
-        border:none;
         border-radius:8px;
-        outline:none;
+        border:none;
         font-size:15px;
       }
 
@@ -82,10 +101,9 @@ app.get("/", (req, res) => {
         padding:12px 18px;
         background:#19c37d;
         border:none;
-        color:white;
         border-radius:8px;
+        color:white;
         cursor:pointer;
-        transition:0.2s;
       }
 
       button:hover {
@@ -102,36 +120,31 @@ app.get("/", (req, res) => {
     </div>
 
     <div id="chat">
-
       <div id="messages"></div>
 
       <div id="inputBox">
         <input id="msg" placeholder="Napisz wiadomość..." />
         <button onclick="send()">Wyślij</button>
       </div>
-
     </div>
 
     <script>
       const box = document.getElementById("messages");
 
-      function newChat(){
+      function newChat() {
         box.innerHTML = "";
       }
 
-      function typeEffect(element, text) {
+      function typeEffect(el, text) {
         let i = 0;
-        const speed = 15;
-
-        function typing() {
+        function write() {
           if (i < text.length) {
-            element.innerHTML += text.charAt(i);
+            el.innerHTML += text.charAt(i);
             i++;
-            setTimeout(typing, speed);
+            setTimeout(write, 15);
           }
         }
-
-        typing();
+        write();
       }
 
       async function send() {
@@ -140,11 +153,19 @@ app.get("/", (req, res) => {
 
         if (!text) return;
 
-        box.innerHTML += '<div class="msg user">' + text + '</div>';
+        // USER
+        box.innerHTML += '<div class="msg user fade">' + text + '</div>';
 
-        const aiMsg = document.createElement("div");
-        aiMsg.className = "msg ai";
-        box.appendChild(aiMsg);
+        // LOADING
+        const loading = document.createElement("div");
+        loading.className = "msg ai typing";
+        loading.innerText = "🤖 pisze";
+        box.appendChild(loading);
+
+        box.scrollTop = box.scrollHeight;
+
+        // delay (jak AI)
+        await new Promise(r => setTimeout(r, 500 + Math.random()*500));
 
         const res = await fetch("/chat", {
           method:"POST",
@@ -154,7 +175,13 @@ app.get("/", (req, res) => {
 
         const data = await res.json();
 
-        // typing animation
+        loading.remove();
+
+        // AI MESSAGE
+        const aiMsg = document.createElement("div");
+        aiMsg.className = "msg ai fade";
+        box.appendChild(aiMsg);
+
         typeEffect(aiMsg, data.reply);
 
         box.scrollTop = box.scrollHeight;
@@ -174,7 +201,8 @@ app.get("/", (req, res) => {
   `);
 });
 
-// backend
+
+// ✅ BACKEND HYBRYDA
 app.post("/chat", async (req, res) => {
   const { message } = req.body;
 
@@ -206,5 +234,5 @@ app.post("/chat", async (req, res) => {
   }
 });
 
+
 app.listen(process.env.PORT || 3000);
-``
