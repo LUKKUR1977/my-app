@@ -3,53 +3,155 @@ const express = require("express");
 const app = express();
 app.use(express.json());
 
-// ✅ fallback zawsze działa
+// ✅ fallback AI (ZAWSZE DZIAŁA)
 function fallback(message) {
-  return "AI (offline): " + message;
+  return "🤖 " + message;
 }
 
-// UI
+// ✅ FRONT (CHATGPT UI)
 app.get("/", (req, res) => {
   res.send(`
   <html>
-  <body style="background:#222;color:white;font-family:Arial;">
-    <div id="messages" style="height:90vh;overflow:auto;"></div>
-    <input id="msg" style="width:80%" />
-    <button onclick="send()">Wyślij</button>
+  <head>
+    <style>
+      body {
+        margin:0;
+        display:flex;
+        background:#343541;
+        color:white;
+        font-family:Arial;
+      }
+
+      #sidebar {
+        width:220px;
+        background:#202123;
+        padding:15px;
+      }
+
+      #chat {
+        flex:1;
+        display:flex;
+        flex-direction:column;
+        height:100vh;
+      }
+
+      #messages {
+        flex:1;
+        overflow-y:auto;
+        padding:20px;
+        display:flex;
+        flex-direction:column;
+      }
+
+      .msg {
+        max-width:70%;
+        padding:12px;
+        border-radius:8px;
+        margin-bottom:10px;
+      }
+
+      .user {
+        background:#3b82f6;
+        align-self:flex-end;
+      }
+
+      .ai {
+        background:#444654;
+        align-self:flex-start;
+      }
+
+      #inputBox {
+        display:flex;
+        padding:10px;
+        background:#40414f;
+      }
+
+      input {
+        flex:1;
+        padding:10px;
+        border:none;
+        border-radius:5px;
+      }
+
+      button {
+        margin-left:10px;
+        padding:10px;
+        background:#19c37d;
+        border:none;
+        color:white;
+        border-radius:5px;
+        cursor:pointer;
+      }
+    </style>
+  </head>
+
+  <body>
+
+    <div id="sidebar">
+      <h3>💬 Chat</h3>
+      <button onclick="newChat()">Nowa rozmowa</button>
+    </div>
+
+    <div id="chat">
+      <div id="messages"></div>
+
+      <div id="inputBox">
+        <input id="msg" placeholder="Napisz coś..." />
+        <button onclick="send()">Wyślij</button>
+      </div>
+    </div>
 
     <script>
       const box = document.getElementById("messages");
 
+      function newChat(){
+        box.innerHTML = "";
+      }
+
       async function send() {
         const input = document.getElementById("msg");
-        const msg = input.value;
+        const text = input.value;
 
-        box.innerHTML += "<p>Ty: " + msg + "</p>";
+        if (!text) return;
+
+        box.innerHTML += '<div class="msg user">' + text + '</div>';
+
+        const loading = document.createElement("div");
+        loading.className = "msg ai";
+        loading.innerText = "🤖 pisze...";
+        box.appendChild(loading);
 
         const res = await fetch("/chat", {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({message: msg})
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({message:text})
         });
 
         const data = await res.json();
 
-        box.innerHTML += "<p>AI: " + data.reply + "</p>";
+        loading.remove();
+
+        box.innerHTML += '<div class="msg ai">' + data.reply + '</div>';
+
+        box.scrollTop = box.scrollHeight;
+        input.value = "";
       }
 
-      document.getElementById("msg").addEventListener("keydown", function(e) {
+      // ✅ ENTER
+      document.getElementById("msg").addEventListener("keydown", e => {
         if (e.key === "Enter") {
           e.preventDefault();
           send();
         }
       });
     </script>
+
   </body>
   </html>
   `);
 });
 
-// ✅ HYBRYDA
+// ✅ backend (hybryda)
 app.post("/chat", async (req, res) => {
   const { message } = req.body;
 
@@ -72,14 +174,9 @@ app.post("/chat", async (req, res) => {
       return res.json({ reply: fallback(message) });
     }
 
-    const reply =
-      data.choices?.[0]?.message?.content;
-
-    if (!reply) {
-      return res.json({ reply: fallback(message) });
-    }
-
-    res.json({ reply });
+    res.json({
+      reply: data.choices?.[0]?.message?.content || fallback(message)
+    });
 
   } catch {
     res.json({ reply: fallback(message) });
