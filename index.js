@@ -1,91 +1,72 @@
 const express = require("express");
-
 const app = express();
 app.use(express.json());
 
 const PORT = process.env.PORT;
 
-// ✅ CZAS
-function getTime(){
-  return new Date().toLocaleTimeString("pl-PL", {
-    timeZone: "Europe/Warszawa" // poprawione
-  });
-}
-
-// ✅ BOT SMART
-function generateReply(text){
+// ✅ BOT (działający)
+function reply(text){
   const t = text.toLowerCase();
 
-  // ✅ godzina
   if(t.includes("godzina")){
-    return "🕒 Jest godzina: " + getTime();
+    return "🕒 " + new Date().toLocaleTimeString("pl-PL", {
+      timeZone: "Europe/Warsaw"
+    });
   }
 
-  // ✅ przywitanie
-  if(t.includes("hej") || t.includes("cześć") || t.includes("czesc")){
+  if(t.includes("hej")){
     return "👋 Hej!";
   }
 
-  // ✅ stolica paryża
-  if(t.includes("stolica") && t.includes("paryz")){
-    return "🇫🇷 Stolica Francji to Paryż 😉";
-  }
-
-  // ✅ wiek
-  if(t.includes("ile masz lat")){
-    return "🤖 Nie mam lat 😄 jestem programem!";
-  }
-
-  // ✅ fallback
   return "🤖 Nie rozumiem 😄";
 }
 
-// ✅ FRONT
-app.get("/", (req, res) => {
+// ✅ FRONT (NAPRAWIONY)
+app.get("/", (req,res)=>{
   res.send(`
   <html>
-  <body style="background:#111;color:white;font-family:sans-serif;padding:20px">
+  <body style="background:black;color:white;font-family:sans-serif;padding:20px">
 
   <h2>Chat</h2>
 
-  <input id="msg" placeholder="message">
-  <button onclick="send()">Send</button>
+  <input id="msg" style="padding:10px">
+  <button id="btn">Send</button>
 
-  <div id="msgs"></div>
+  <div id="chat"></div>
 
   <script>
 
-  function setup(){
-    const input = document.getElementById("msg");
+  const input = document.getElementById("msg");
+  const btn = document.getElementById("btn");
+  const chat = document.getElementById("chat");
 
-    input.addEventListener("keydown", function(e){
-      if(e.key === "Enter"){
-        e.preventDefault();
-        send();
-      }
-    });
-  }
-
-  async function send(){
-    const input = document.getElementById("msg");
+  async function sendMessage(){
     const text = input.value.trim();
     if(!text) return;
 
-    const r = await fetch("/chat",{
+    const res = await fetch("/chat",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({text})
+      body: JSON.stringify({text})
     });
 
-    const d = await r.json();
+    const data = await res.json();
 
-    msgs.innerHTML += "<p>"+text+"</p>";
-    msgs.innerHTML += "<p>"+d.reply+"</p>";
+    chat.innerHTML += "<p>"+text+"</p>";
+    chat.innerHTML += "<p>"+data.reply+"</p>";
 
     input.value="";
   }
 
-  window.onload = setup;
+  // ✅ CLICK
+  btn.onclick = sendMessage;
+
+  // ✅ ENTER
+  input.addEventListener("keydown", function(e){
+    if(e.key === "Enter"){
+      sendMessage();
+    }
+  });
 
   </script>
 
@@ -96,10 +77,11 @@ app.get("/", (req, res) => {
 
 // ✅ API
 app.post("/chat",(req,res)=>{
-  res.json({reply: generateReply(req.body.text)});
+  res.json({reply: reply(req.body.text)});
 });
 
 // ✅ START
-app.listen(PORT, "0.0.0.0", ()=>{
+app.listen(PORT,"0.0.0.0",()=>{
   console.log("🚀 RUNNING", PORT);
 });
+``
