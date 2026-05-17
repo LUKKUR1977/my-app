@@ -5,37 +5,39 @@ app.use(express.json());
 
 const PORT = process.env.PORT;
 
-// 🔥 PROSTE „AI” (bardziej inteligentne)
+// 🔥 POPRAWNA GODZINA (Warszawa)
+function getPolishTime(){
+  return new Date().toLocaleTimeString("pl-PL", {
+    timeZone: "Europe/Warsaw",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+}
+
+// 🔥 BOT
 function generateReply(text){
   const t = text.toLowerCase();
 
   if(t.includes("godzina")){
-    const now = new Date();
-    return "🕒 Jest godzina: " + now.toLocaleTimeString();
+    return "🕒 Jest godzina: " + getPolishTime();
   }
 
   if(t.includes("data")){
-    return "📅 Dzisiaj jest: " + new Date().toLocaleDateString();
+    return "📅 Dziś: " + new Date().toLocaleDateString("pl-PL", {
+      timeZone: "Europe/Warsaw"
+    });
   }
 
-  if(t.includes("hej") || t.includes("cześć") || t.includes("czesc") || t.includes("hello")){
-    return "👋 Hej! Jak mogę pomóc?";
+  if(t.includes("hej") || t.includes("czesc") || t.includes("cześć")){
+    return "👋 Hej! Co u Ciebie?";
   }
 
   if(t.includes("co robisz")){
-    return "💻 Rozmawiam z tobą 😄";
+    return "💻 Działam na Twoim serwerze 😎";
   }
 
-  if(t.includes("kim jestes")){
-    return "🤖 Jestem twoim botem na Railway 🚀";
-  }
-
-  if(t.includes("haha")){
-    return "😂 dobre 😄";
-  }
-
-  // fallback (najważniejsze – już NIE powtarza)
-  return "🤖 Nie rozumiem, spróbuj inaczej 😄";
+  return "🤖 Spróbuj zapytać inaczej 😄";
 }
 
 // ✅ FRONT
@@ -61,8 +63,8 @@ app.get("/", (req, res) => {
 
   <script>
   async function register(){
-    const r = await fetch("/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})});
-    alert(JSON.stringify(await r.json()));
+    await fetch("/register",{method:"POST"});
+    alert("✅ konto utworzone");
   }
 
   async function login(){
@@ -72,13 +74,20 @@ app.get("/", (req, res) => {
   }
 
   async function send(){
+    const text = msg.value;
+
     const r = await fetch("/chat",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({text:msg.value})
+      body:JSON.stringify({text})
     });
+
     const d = await r.json();
-    msgs.innerHTML += "<p>"+msg.value+"</p><p>"+d.reply+"</p>";
+
+    msgs.innerHTML += "<p>"+text+"</p>";
+    msgs.innerHTML += "<p>"+d.reply+"</p>";
+
+    msg.value="";
   }
   </script>
 
@@ -91,7 +100,6 @@ app.get("/", (req, res) => {
 app.post("/register",(req,res)=>res.json({ok:true}));
 app.post("/login",(req,res)=>res.json({ok:true}));
 
-// 🔥 NOWY CHAT
 app.post("/chat",(req,res)=>{
   const reply = generateReply(req.body.text);
   res.json({reply});
