@@ -3,53 +3,36 @@ const express = require("express");
 const app = express();
 app.use(express.json());
 
-let history = [];
-
-// ✅ fallback AI (zawsze działa)
-function smartAI(message) {
-  const msg = message.toLowerCase();
-
-  if (msg.includes("kim jesteś")) return "Jestem Twoim AI 🤖";
-  if (msg.includes("cześć")) return "Hej 👋";
-  if (msg.includes("jak się masz")) return "Dobrze 😎";
-
-  return "Rozumiem: " + message;
+// fallback (zawsze działa)
+function fallback(message) {
+  return "Fallback: " + message;
 }
 
-// ✅ UI
+// strona
 app.get("/", (req, res) => {
   res.send(`
   <html>
-  <body style="background:#343541;color:white;font-family:Arial;">
-
-    <div id="messages" style="height:90vh;overflow:auto;"></div>
-
-    <input id="msg" style="width:80%" />
+  <body style="background:#222;color:white;font-family:Arial;">
+    <div id="messages"></div>
+    <input id="msg"/>
     <button onclick="send()">Wyślij</button>
 
     <script>
-      const box = document.getElementById("messages");
-
       async function send() {
         const input = document.getElementById("msg");
-        const text = input.value;
+        const msg = input.value;
 
-        if (!text) return;
-
-        box.innerHTML += "<p>Ty: " + text + "</p>";
+        document.getElementById("messages").innerHTML += "<p>Ty: " + msg + "</p>";
 
         const res = await fetch("/chat", {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({message:text})
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({message: msg})
         });
 
         const data = await res.json();
 
-        box.innerHTML += "<p>AI: " + data.reply + "</p>";
-        box.scrollTop = box.scrollHeight;
-
-        input.value = "";
+        document.getElementById("messages").innerHTML += "<p>AI: " + data.reply + "</p>";
       }
 
       document.getElementById("msg").addEventListener("keydown", function(e) {
@@ -59,19 +42,16 @@ app.get("/", (req, res) => {
         }
       });
     </script>
-
   </body>
   </html>
   `);
 });
 
-// ✅ HYBRYDA AI (OpenRouter + fallback)
+// ✅ DEBUG OPENROUTER
 app.post("/chat", async (req, res) => {
-  const { message } = req.body;
-
-  history.push(message);
-
   try {
+    const { message } = req.body;
+
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -86,26 +66,24 @@ app.post("/chat", async (req, res) => {
 
     const data = await response.json();
 
-    // ✅ jeśli działa — użyj AI
-    if (data.choices && data.choices[0]) {
-      return res.json({
-        reply: data.choices[0].message.content
-      });
+    console.log("OPENROUTER:", data);
+
+    if (data.error) {
+      return res.json({ reply: "ERROR: " + data.error.message });
     }
 
-    // ❌ jeśli NIE działa → fallback
-    const reply = smartAI(message);
+    const reply = data.choices?.[0]?.message?.content;
+
+    if (!reply) {
+      return res.json({ reply: "BRAK ODPOWIEDZI Z AI ❌" });
+    }
+
     res.json({ reply });
 
   } catch (err) {
     console.log(err);
-
-    // ✅ fallback zawsze działa
-    const reply = smartAI(message);
-    res.json({ reply });
+    res.json({ reply: "CRASH 💥" });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT);
+app.listen(process.env.PORT || 3000);
