@@ -5,7 +5,40 @@ app.use(express.json());
 
 const PORT = process.env.PORT;
 
-// ✅ FRONT (UI)
+// 🔥 PROSTE „AI” (bardziej inteligentne)
+function generateReply(text){
+  const t = text.toLowerCase();
+
+  if(t.includes("godzina")){
+    const now = new Date();
+    return "🕒 Jest godzina: " + now.toLocaleTimeString();
+  }
+
+  if(t.includes("data")){
+    return "📅 Dzisiaj jest: " + new Date().toLocaleDateString();
+  }
+
+  if(t.includes("hej") || t.includes("cześć") || t.includes("czesc") || t.includes("hello")){
+    return "👋 Hej! Jak mogę pomóc?";
+  }
+
+  if(t.includes("co robisz")){
+    return "💻 Rozmawiam z tobą 😄";
+  }
+
+  if(t.includes("kim jestes")){
+    return "🤖 Jestem twoim botem na Railway 🚀";
+  }
+
+  if(t.includes("haha")){
+    return "😂 dobre 😄";
+  }
+
+  // fallback (najważniejsze – już NIE powtarza)
+  return "🤖 Nie rozumiem, spróbuj inaczej 😄";
+}
+
+// ✅ FRONT
 app.get("/", (req, res) => {
   res.send(`
   <html>
@@ -28,22 +61,13 @@ app.get("/", (req, res) => {
 
   <script>
   async function register(){
-    const r = await fetch("/register",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({u:u.value,p:p.value})
-    });
+    const r = await fetch("/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})});
     alert(JSON.stringify(await r.json()));
   }
 
   async function login(){
-    const r = await fetch("/login",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({u:u.value,p:p.value})
-    });
+    const r = await fetch("/login",{method:"POST"});
     const d = await r.json();
-    alert(JSON.stringify(d));
     if(d.ok){chat.style.display="block";}
   }
 
@@ -63,43 +87,18 @@ app.get("/", (req, res) => {
   `);
 });
 
-// ✅ REGISTER (fake)
-app.post("/register", (req,res)=>{
-  res.json({ok:true});
-});
+// ✅ API
+app.post("/register",(req,res)=>res.json({ok:true}));
+app.post("/login",(req,res)=>res.json({ok:true}));
 
-// ✅ LOGIN (fake)
-app.post("/login", (req,res)=>{
-  res.json({ok:true});
-});
-
-// ✅ CHAT (SMARTER BOT 💥)
-app.post("/chat", (req,res)=>{
-  const text = req.body.text.toLowerCase();
-
-  // 🔥 proste odpowiedzi
-  if(text.includes("godzina")){
-    return res.json({reply:"🕒 Nie mam zegarka 😄 ale możesz sprawdzić w telefonie!"});
-  }
-
-  if(text.includes("cześć") || text.includes("czesc") || text.includes("hello")){
-    return res.json({reply:"👋 Cześć! Jak mogę pomóc?"});
-  }
-
-  if(text.includes("jak masz na imię")){
-    return res.json({reply:"🤖 Jestem prostym botem 🚀"});
-  }
-
-  if(text.includes("co robisz")){
-    return res.json({reply:"💻 Działam na Twoim serwerze 😄"});
-  }
-
-  // ❗ fallback
-  res.json({reply:"🤖 Nie rozumiem jeszcze 😄"});
+// 🔥 NOWY CHAT
+app.post("/chat",(req,res)=>{
+  const reply = generateReply(req.body.text);
+  res.json({reply});
 });
 
 // ✅ START
 app.listen(PORT, "0.0.0.0", ()=>{
-  console.log("🚀 SERVER RUNNING ON", PORT);
+  console.log("🚀 SERVER RUNNING", PORT);
 });
-``
+
