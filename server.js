@@ -3,15 +3,18 @@ const express = require("express");
 const app = express();
 app.use(express.json());
 
-// ✅ UI
+// ✅ fallback zawsze działa
+function fallback(message) {
+  return "AI (offline): " + message;
+}
+
+// UI
 app.get("/", (req, res) => {
   res.send(`
   <html>
   <body style="background:#222;color:white;font-family:Arial;">
-
     <div id="messages" style="height:90vh;overflow:auto;"></div>
-
-    <input id="msg" style="width:80%" placeholder="Napisz coś..." />
+    <input id="msg" style="width:80%" />
     <button onclick="send()">Wyślij</button>
 
     <script>
@@ -19,24 +22,19 @@ app.get("/", (req, res) => {
 
       async function send() {
         const input = document.getElementById("msg");
-        const text = input.value;
+        const msg = input.value;
 
-        if (!text) return;
-
-        box.innerHTML += "<p>Ty: " + text + "</p>";
+        box.innerHTML += "<p>Ty: " + msg + "</p>";
 
         const res = await fetch("/chat", {
           method: "POST",
           headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({message:text})
+          body: JSON.stringify({message: msg})
         });
 
         const data = await res.json();
 
         box.innerHTML += "<p>AI: " + data.reply + "</p>";
-        box.scrollTop = box.scrollHeight;
-
-        input.value = "";
       }
 
       document.getElementById("msg").addEventListener("keydown", function(e) {
@@ -46,17 +44,16 @@ app.get("/", (req, res) => {
         }
       });
     </script>
-
   </body>
   </html>
   `);
 });
 
-// ✅ PRAWDZIWE AI (PEWNY MODEL)
+// ✅ HYBRYDA
 app.post("/chat", async (req, res) => {
-  try {
-    const { message } = req.body;
+  const { message } = req.body;
 
+  try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -64,34 +61,29 @@ app.post("/chat", async (req, res) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-3-8b-instruct", // ✅ DZIAŁA
-        messages: [
-          { role: "user", content: message }
-        ]
+        model: "meta-llama/llama-3-8b-instruct",
+        messages: [{ role: "user", content: message }]
       })
     });
 
     const data = await response.json();
 
     if (data.error) {
-      return res.json({
-        reply: "ERROR: " + data.error.message
-      });
+      return res.json({ reply: fallback(message) });
     }
 
     const reply =
-      data.choices?.[0]?.message?.content || "Brak odpowiedzi";
+      data.choices?.[0]?.message?.content;
+
+    if (!reply) {
+      return res.json({ reply: fallback(message) });
+    }
 
     res.json({ reply });
 
-  } catch (err) {
-    console.log(err);
-    res.json({ reply: "Błąd AI 💥" });
+  } catch {
+    res.json({ reply: fallback(message) });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log("🚀 SERVER:", PORT);
-});
+app.listen(process.env.PORT || 3000);
