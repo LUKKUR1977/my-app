@@ -3,12 +3,12 @@ const express = require("express");
 const app = express();
 app.use(express.json());
 
-// ✅ fallback AI (ZAWSZE DZIAŁA)
+// fallback
 function fallback(message) {
   return "🤖 " + message;
 }
 
-// ✅ FRONT (CHATGPT UI)
+// UI PRO
 app.get("/", (req, res) => {
   res.send(`
   <html>
@@ -25,7 +25,7 @@ app.get("/", (req, res) => {
       #sidebar {
         width:220px;
         background:#202123;
-        padding:15px;
+        padding:20px;
       }
 
       #chat {
@@ -38,20 +38,22 @@ app.get("/", (req, res) => {
       #messages {
         flex:1;
         overflow-y:auto;
-        padding:20px;
+        padding:30px;
         display:flex;
         flex-direction:column;
+        gap:10px;
       }
 
       .msg {
         max-width:70%;
-        padding:12px;
-        border-radius:8px;
-        margin-bottom:10px;
+        padding:14px;
+        border-radius:10px;
+        font-size:15px;
+        line-height:1.4;
       }
 
       .user {
-        background:#3b82f6;
+        background:linear-gradient(135deg,#3b82f6,#2563eb);
         align-self:flex-end;
       }
 
@@ -62,25 +64,32 @@ app.get("/", (req, res) => {
 
       #inputBox {
         display:flex;
-        padding:10px;
+        padding:15px;
         background:#40414f;
       }
 
       input {
         flex:1;
-        padding:10px;
+        padding:12px;
         border:none;
-        border-radius:5px;
+        border-radius:8px;
+        outline:none;
+        font-size:15px;
       }
 
       button {
         margin-left:10px;
-        padding:10px;
+        padding:12px 18px;
         background:#19c37d;
         border:none;
         color:white;
-        border-radius:5px;
+        border-radius:8px;
         cursor:pointer;
+        transition:0.2s;
+      }
+
+      button:hover {
+        background:#14a46d;
       }
     </style>
   </head>
@@ -93,12 +102,14 @@ app.get("/", (req, res) => {
     </div>
 
     <div id="chat">
+
       <div id="messages"></div>
 
       <div id="inputBox">
-        <input id="msg" placeholder="Napisz coś..." />
+        <input id="msg" placeholder="Napisz wiadomość..." />
         <button onclick="send()">Wyślij</button>
       </div>
+
     </div>
 
     <script>
@@ -106,6 +117,21 @@ app.get("/", (req, res) => {
 
       function newChat(){
         box.innerHTML = "";
+      }
+
+      function typeEffect(element, text) {
+        let i = 0;
+        const speed = 15;
+
+        function typing() {
+          if (i < text.length) {
+            element.innerHTML += text.charAt(i);
+            i++;
+            setTimeout(typing, speed);
+          }
+        }
+
+        typing();
       }
 
       async function send() {
@@ -116,10 +142,9 @@ app.get("/", (req, res) => {
 
         box.innerHTML += '<div class="msg user">' + text + '</div>';
 
-        const loading = document.createElement("div");
-        loading.className = "msg ai";
-        loading.innerText = "🤖 pisze...";
-        box.appendChild(loading);
+        const aiMsg = document.createElement("div");
+        aiMsg.className = "msg ai";
+        box.appendChild(aiMsg);
 
         const res = await fetch("/chat", {
           method:"POST",
@@ -129,15 +154,13 @@ app.get("/", (req, res) => {
 
         const data = await res.json();
 
-        loading.remove();
-
-        box.innerHTML += '<div class="msg ai">' + data.reply + '</div>';
+        // typing animation
+        typeEffect(aiMsg, data.reply);
 
         box.scrollTop = box.scrollHeight;
         input.value = "";
       }
 
-      // ✅ ENTER
       document.getElementById("msg").addEventListener("keydown", e => {
         if (e.key === "Enter") {
           e.preventDefault();
@@ -151,7 +174,7 @@ app.get("/", (req, res) => {
   `);
 });
 
-// ✅ backend (hybryda)
+// backend
 app.post("/chat", async (req, res) => {
   const { message } = req.body;
 
@@ -184,3 +207,4 @@ app.post("/chat", async (req, res) => {
 });
 
 app.listen(process.env.PORT || 3000);
+``
