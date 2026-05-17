@@ -5,7 +5,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT;
 
-// 🔥 POPRAWNA GODZINA (Warszawa)
+// ✅ POLSKI CZAS
 function getPolishTime(){
   return new Date().toLocaleTimeString("pl-PL", {
     timeZone: "Europe/Warsaw",
@@ -15,7 +15,7 @@ function getPolishTime(){
   });
 }
 
-// 🔥 BOT
+// ✅ BOT
 function generateReply(text){
   const t = text.toLowerCase();
 
@@ -23,24 +23,14 @@ function generateReply(text){
     return "🕒 Jest godzina: " + getPolishTime();
   }
 
-  if(t.includes("data")){
-    return "📅 Dziś: " + new Date().toLocaleDateString("pl-PL", {
-      timeZone: "Europe/Warsaw"
-    });
+  if(t.includes("hej") || t.includes("czesc")){
+    return "👋 Hej!";
   }
 
-  if(t.includes("hej") || t.includes("czesc") || t.includes("cześć")){
-    return "👋 Hej! Co u Ciebie?";
-  }
-
-  if(t.includes("co robisz")){
-    return "💻 Działam na Twoim serwerze 😎";
-  }
-
-  return "🤖 Spróbuj zapytać inaczej 😄";
+  return "🤖 Nie rozumiem 😄";
 }
 
-// ✅ FRONT
+// ✅ FRONT + ENTER FIX
 app.get("/", (req, res) => {
   res.send(`
   <html>
@@ -62,6 +52,7 @@ app.get("/", (req, res) => {
   </div>
 
   <script>
+
   async function register(){
     await fetch("/register",{method:"POST"});
     alert("✅ konto utworzone");
@@ -74,7 +65,8 @@ app.get("/", (req, res) => {
   }
 
   async function send(){
-    const text = msg.value;
+    const text = msg.value.trim();
+    if(!text) return;
 
     const r = await fetch("/chat",{
       method:"POST",
@@ -89,6 +81,14 @@ app.get("/", (req, res) => {
 
     msg.value="";
   }
+
+  // 🔥 ENTER = SEND ✅
+  msg.addEventListener("keydown", function(e){
+    if(e.key === "Enter"){
+      send();
+    }
+  });
+
   </script>
 
   </body>
