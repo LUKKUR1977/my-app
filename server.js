@@ -6,39 +6,42 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-let db = null;
+let db;
 
-// 🔥 KLUCZ — FIX SSL
-const client = new MongoClient(process.env.MONGO_URI, {
+// ✅ NOWY FIX — FULL TLS FIX
+const uri = process.env.MONGO_URI;
+
+const client = new MongoClient(uri, {
+  ssl: true,
   tls: true,
-  tlsAllowInvalidCertificates: true
+  tlsAllowInvalidCertificates: true,
+  tlsAllowInvalidHostnames: true
 });
 
+// 🔌 łączymy bez blokowania aplikacji
 client.connect()
   .then(() => {
     db = client.db("chatapp");
     console.log("✅ Mongo CONNECTED");
   })
   .catch(err => {
-    console.log("❌ Mongo error:", err.message);
+    console.log("❌ Mongo ERROR:", err.message);
   });
 
-// ✅ żeby NIE było 502
+// ✅ TEST endpoint
 app.get("/", (req, res) => {
   res.send("✅ API działa");
 });
 
-// ✅ REGISTER
 app.post("/register", async (req, res) => {
-  if (!db) return res.json({ ok: false, error: "no db yet" });
+  if (!db) return res.json({ ok: false });
 
   const { u, p } = req.body;
-  await db.collection("users").insertOne({ u, p });
 
+  await db.collection("users").insertOne({ u, p });
   res.json({ ok: true });
 });
 
-// ✅ LOGIN
 app.post("/login", async (req, res) => {
   if (!db) return res.json({ ok: false });
 
@@ -49,12 +52,12 @@ app.post("/login", async (req, res) => {
   res.json({ ok: !!user });
 });
 
-// ✅ CHAT
 app.post("/chat", (req, res) => {
   res.json({ reply: "🤖 " + req.body.message });
 });
 
-// ✅ SERVER MUSI DZIAŁAĆ NON-STOP
+// 🚀 MUSI DZIAŁAĆ NON STOP
 app.listen(PORT, "0.0.0.0", () => {
-  console.log("🚀 SERVER RUNNING ON", PORT);
+  console.log("🚀 SERVER RUNNING ON PORT", PORT);
 });
+``
