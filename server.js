@@ -3,12 +3,12 @@ const express = require("express");
 const app = express();
 app.use(express.json());
 
-// ✅ fallback AI
+// fallback
 function fallback(message) {
   return "🤖 " + message;
 }
 
-// ✅ FRONTEND (PRO UI)
+// UI
 app.get("/", (req, res) => {
   res.send(`
   <html>
@@ -25,7 +25,19 @@ app.get("/", (req, res) => {
       #sidebar {
         width:220px;
         background:#202123;
-        padding:20px;
+        padding:15px;
+      }
+
+      .chat-item {
+        padding:10px;
+        margin-bottom:5px;
+        background:#2a2b32;
+        border-radius:6px;
+        cursor:pointer;
+      }
+
+      .chat-item:hover {
+        background:#3a3b42;
       }
 
       #chat {
@@ -37,8 +49,8 @@ app.get("/", (req, res) => {
 
       #messages {
         flex:1;
-        overflow-y:auto;
-        padding:30px;
+        overflow:auto;
+        padding:20px;
         display:flex;
         flex-direction:column;
         gap:10px;
@@ -46,68 +58,40 @@ app.get("/", (req, res) => {
 
       .msg {
         max-width:70%;
-        padding:14px;
+        padding:12px;
         border-radius:10px;
-        font-size:15px;
       }
 
       .user {
-        background:linear-gradient(135deg,#3b82f6,#2563eb);
+        background:#3b82f6;
         align-self:flex-end;
       }
 
       .ai {
         background:#444654;
-        align-self:flex-start;
-      }
-
-      .fade {
-        opacity:0;
-        animation:fadeIn 0.4s forwards;
-      }
-
-      @keyframes fadeIn {
-        to { opacity:1; }
-      }
-
-      .typing::after {
-        content:"";
-        animation:dots 1.5s infinite;
-      }
-
-      @keyframes dots {
-        0% {content:"";}
-        33% {content:".";}
-        66% {content:"..";}
-        100% {content:"...";}
       }
 
       #inputBox {
         display:flex;
-        padding:15px;
+        padding:10px;
         background:#40414f;
       }
 
       input {
         flex:1;
-        padding:12px;
-        border-radius:8px;
+        padding:10px;
+        border-radius:6px;
         border:none;
-        font-size:15px;
       }
 
       button {
         margin-left:10px;
-        padding:12px 18px;
+        padding:10px;
         background:#19c37d;
         border:none;
-        border-radius:8px;
         color:white;
+        border-radius:6px;
         cursor:pointer;
-      }
-
-      button:hover {
-        background:#14a46d;
       }
     </style>
   </head>
@@ -115,36 +99,61 @@ app.get("/", (req, res) => {
   <body>
 
     <div id="sidebar">
-      <h3>💬 Chat</h3>
-      <button onclick="newChat()">Nowa rozmowa</button>
+      <button onclick="createChat()">+ Nowy czat</button>
+      <div id="chatList"></div>
     </div>
 
     <div id="chat">
       <div id="messages"></div>
 
       <div id="inputBox">
-        <input id="msg" placeholder="Napisz wiadomość..." />
+        <input id="msg" placeholder="Napisz..." />
         <button onclick="send()">Wyślij</button>
       </div>
     </div>
 
     <script>
-      const box = document.getElementById("messages");
+      let chats = JSON.parse(localStorage.getItem("chats")) || [];
+      let currentChat = 0;
 
-      function newChat() {
-        box.innerHTML = "";
+      const box = document.getElementById("messages");
+      const list = document.getElementById("chatList");
+
+      function save() {
+        localStorage.setItem("chats", JSON.stringify(chats));
       }
 
-      function typeEffect(el, text) {
-        let i = 0;
-        function write() {
-          if (i < text.length) {
-            el.innerHTML += text.charAt(i);
-            i++;
-            setTimeout(write, 15);
-          }
-        }
-        write();
+      function renderChats() {
+        list.innerHTML = "";
+
+        chats.forEach((chat, i) => {
+          const el = document.createElement("div");
+          el.className = "chat-item";
+          el.innerText = "Czat " + (i+1);
+          el.onclick = () => {
+            currentChat = i;
+            renderMessages();
+          };
+          list.appendChild(el);
+        });
+      }
+
+      function renderMessages() {
+        box.innerHTML = "";
+
+        chats[currentChat].forEach(msg => {
+          box.innerHTML += '<div class="msg '+msg.type+'">'+msg.text+'</div>';
+        });
+
+        box.scrollTop = box.scrollHeight;
+      }
+
+      function createChat() {
+        chats.push([]);
+        currentChat = chats.length - 1;
+        save();
+        renderChats();
+        renderMessages();
       }
 
       async function send() {
@@ -153,19 +162,13 @@ app.get("/", (req, res) => {
 
         if (!text) return;
 
-        // USER
-        box.innerHTML += '<div class="msg user fade">' + text + '</div>';
+        chats[currentChat].push({type:"user", text});
+        renderMessages();
 
-        // LOADING
         const loading = document.createElement("div");
-        loading.className = "msg ai typing";
-        loading.innerText = "🤖 pisze";
+        loading.className = "msg ai";
+        loading.innerText = "🤖 pisze...";
         box.appendChild(loading);
-
-        box.scrollTop = box.scrollHeight;
-
-        // delay (jak AI)
-        await new Promise(r => setTimeout(r, 500 + Math.random()*500));
 
         const res = await fetch("/chat", {
           method:"POST",
@@ -177,15 +180,11 @@ app.get("/", (req, res) => {
 
         loading.remove();
 
-        // AI MESSAGE
-        const aiMsg = document.createElement("div");
-        aiMsg.className = "msg ai fade";
-        box.appendChild(aiMsg);
+        chats[currentChat].push({type:"ai", text:data.reply});
+        renderMessages();
 
-        typeEffect(aiMsg, data.reply);
-
-        box.scrollTop = box.scrollHeight;
         input.value = "";
+        save();
       }
 
       document.getElementById("msg").addEventListener("keydown", e => {
@@ -194,6 +193,10 @@ app.get("/", (req, res) => {
           send();
         }
       });
+
+      if (chats.length === 0) createChat();
+      renderChats();
+      renderMessages();
     </script>
 
   </body>
@@ -201,38 +204,35 @@ app.get("/", (req, res) => {
   `);
 });
 
-
-// ✅ BACKEND HYBRYDA
+// backend
 app.post("/chat", async (req, res) => {
   const { message } = req.body;
 
   try {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + process.env.OPENROUTER_API_KEY,
-        "Content-Type": "application/json"
+      method:"POST",
+      headers:{
+        "Authorization":"Bearer " + process.env.OPENROUTER_API_KEY,
+        "Content-Type":"application/json"
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-3-8b-instruct",
-        messages: [{ role: "user", content: message }]
+        model:"meta-llama/llama-3-8b-instruct",
+        messages:[{role:"user", content:message}]
       })
     });
 
     const data = await response.json();
 
-    if (data.error) {
-      return res.json({ reply: fallback(message) });
-    }
+    if (data.error) return res.json({reply:fallback(message)});
 
     res.json({
       reply: data.choices?.[0]?.message?.content || fallback(message)
     });
 
   } catch {
-    res.json({ reply: fallback(message) });
+    res.json({reply:fallback(message)});
   }
 });
 
-
 app.listen(process.env.PORT || 3000);
+
