@@ -8,14 +8,12 @@ const PORT = process.env.PORT || 3000;
 
 let db = null;
 
-// ✅ STABILNE POŁĄCZENIE DO MONGO
+// ✅ PEWNE POŁĄCZENIE
 async function connectDB() {
   try {
     console.log("🔌 connecting DB...");
 
-    const client = new MongoClient(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 5000
-    });
+    const client = new MongoClient(process.env.MONGO_URI);
 
     await client.connect();
 
@@ -24,11 +22,13 @@ async function connectDB() {
     console.log("✅ Mongo CONNECTED");
 
   } catch (err) {
-    console.log("❌ DB FAIL:", err.message);
+    console.log("❌ DB ERROR:");
+    console.log(err);
   }
 }
 
 connectDB();
+
 
 // ✅ FRONT
 app.get("/", (req, res) => {
@@ -53,7 +53,7 @@ app.get("/", (req, res) => {
 
   <script>
   async function register(){
-    const r = await fetch("/register",{
+    const r = await fetch("/register", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body: JSON.stringify({u:u.value,p:p.value})
@@ -62,18 +62,20 @@ app.get("/", (req, res) => {
   }
 
   async function login(){
-    const r = await fetch("/login",{
+    const r = await fetch("/login", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body: JSON.stringify({u:u.value,p:p.value})
     });
     const d = await r.json();
     alert(JSON.stringify(d));
-    if(d.ok){ chat.style.display="block"; }
+    if(d.ok){
+      chat.style.display="block";
+    }
   }
 
   async function send(){
-    const r = await fetch("/chat",{
+    const r = await fetch("/chat", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body: JSON.stringify({message:msg.value})
@@ -88,16 +90,25 @@ app.get("/", (req, res) => {
   `);
 });
 
+
 // ✅ REGISTER
 app.post("/register", async (req, res) => {
-  if (!db) return res.json({ ok:false });
+  if (!db) {
+    console.log("❌ DB NULL");
+    return res.json({ ok:false });
+  }
 
-  const { u, p } = req.body;
-
-  await db.collection("users").insertOne({ u, p });
-
-  res.json({ ok:true });
+  try {
+    const { u, p } = req.body;
+    await db.collection("users").insertOne({ u, p });
+    console.log("✅ USER SAVED");
+    res.json({ ok:true });
+  } catch (err) {
+    console.log("❌ REGISTER ERROR", err);
+    res.json({ ok:false });
+  }
 });
+
 
 // ✅ LOGIN
 app.post("/login", async (req, res) => {
@@ -110,13 +121,14 @@ app.post("/login", async (req, res) => {
   res.json({ ok: !!user });
 });
 
+
 // ✅ CHAT
 app.post("/chat", (req, res) => {
   res.json({ reply:"🤖 " + req.body.message });
 });
 
+
 // ✅ SERVER
 app.listen(PORT, "0.0.0.0", () => {
   console.log("🚀 SERVER RUNNING ON", PORT);
 });
-
