@@ -5,7 +5,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT;
 
-// ✅ STRONA (UI)
+// ✅ FRONT (UI)
 app.get("/", (req, res) => {
   res.send(`
   <html>
@@ -63,15 +63,43 @@ app.get("/", (req, res) => {
   `);
 });
 
-// ✅ API (proste)
-app.post("/register", (req,res)=>res.json({ok:true}));
-app.post("/login", (req,res)=>res.json({ok:true}));
+// ✅ REGISTER (fake)
+app.post("/register", (req,res)=>{
+  res.json({ok:true});
+});
+
+// ✅ LOGIN (fake)
+app.post("/login", (req,res)=>{
+  res.json({ok:true});
+});
+
+// ✅ CHAT (SMARTER BOT 💥)
 app.post("/chat", (req,res)=>{
-  res.json({reply:"🤖 " + req.body.text});
+  const text = req.body.text.toLowerCase();
+
+  // 🔥 proste odpowiedzi
+  if(text.includes("godzina")){
+    return res.json({reply:"🕒 Nie mam zegarka 😄 ale możesz sprawdzić w telefonie!"});
+  }
+
+  if(text.includes("cześć") || text.includes("czesc") || text.includes("hello")){
+    return res.json({reply:"👋 Cześć! Jak mogę pomóc?"});
+  }
+
+  if(text.includes("jak masz na imię")){
+    return res.json({reply:"🤖 Jestem prostym botem 🚀"});
+  }
+
+  if(text.includes("co robisz")){
+    return res.json({reply:"💻 Działam na Twoim serwerze 😄"});
+  }
+
+  // ❗ fallback
+  res.json({reply:"🤖 Nie rozumiem jeszcze 😄"});
 });
 
 // ✅ START
-app.listen(PORT, "0.0.0.0", () => {
-  console.log("🚀 SERVER RUNNING", PORT);
+app.listen(PORT, "0.0.0.0", ()=>{
+  console.log("🚀 SERVER RUNNING ON", PORT);
 });
-
+``
