@@ -4,147 +4,136 @@ const { MongoClient } = require("mongodb");
 const app = express();
 app.use(express.json());
 
-let db = null;
+let db;
 
-// ===== DB =====
-async function startDB() {
+// ✅ DB CONNECT
+async function start() {
   try {
-    console.log("🔌 Mongo connect...");
-
     const client = new MongoClient(process.env.MONGO_URI);
     await client.connect();
-
     db = client.db("chatapp");
-
-    console.log("✅ Mongo działa");
-  } catch (err) {
-    console.log("❌ Mongo error:", err.message);
+    console.log("✅ DB connected");
+  } catch (e) {
+    console.log("❌ DB ERROR:", e.message);
   }
 }
-startDB();
+start();
 
-// ===== REGISTER =====
+// ✅ REGISTER
 app.post("/register", async (req, res) => {
-  if (!db) return res.json({ ok: false });
+  try {
+    const { u, p } = req.body;
 
-  const { u, p } = req.body;
+    const exists = await db.collection("users").findOne({ u });
 
-  await db.collection("users").insertOne({
-    u: u,
-    p: p
-  });
+    if (exists) {
+      return res.json({ ok: false, msg: "USER EXISTS" });
+    }
 
-  res.json({ ok: true });
-});
+    await db.collection("users").insertOne({ u, p });
 
-// ===== LOGIN (NAPRAWIONY) =====
-app.post("/login", async (req, res) => {
-  if (!db) return res.json({ ok: false });
-
-  const { u, p } = req.body;
-
-  const user = await db.collection("users").findOne({
-    u: u,
-    p: p
-  });
-
-  res.json({ ok: !!user });
-});
-
-// ===== CHAT =====
-app.post("/chat", (req, res) => {
-  const msg = req.body.message;
-
-  if (msg.includes("godzina")) {
-    return res.json({
-      reply: "🕒 " + new Date().toLocaleTimeString()
-    });
+    res.json({ ok: true });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
   }
+});
 
+// ✅ LOGIN
+app.post("/login", async (req, res) => {
+  try {
+    const { u, p } = req.body;
+
+    const user = await db.collection("users").findOne({ u: u });
+
+    if (!user) {
+      return res.json({ ok: false, msg: "NO USER" });
+    }
+
+    if (user.p !== p) {
+      return res.json({ ok: false, msg: "BAD PASSWORD" });
+    }
+
+    res.json({ ok: true });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ✅ CHAT
+app.post("/chat", (req, res) => {
   res.json({
-    reply: "🤖 " + msg
+    reply: "🤖 " + req.body.message
   });
 });
 
-// ===== FRONT =====
+// ✅ FRONT
 app.get("/", (req, res) => {
 res.send(`
 <html>
-<body style="background:#343541;color:white;font-family:Arial;padding:20px">
+<body style="background:#222;color:white;font-family:Arial;padding:20px">
 
-<div id="loginBox">
-  <h2>🔐 Login</h2>
+<h2>Login</h2>
 
-  <input id="u" placeholder="login"><br><br>
-  <input id="p" placeholder="hasło"><br><br>
+<input id="u" placeholder="login"><br><br>
+<input id="p" placeholder="haslo"><br><br>
 
-  <button onclick="register()">Register</button>
-  <button onclick="login()">Login</button>
-</div>
+<button onclick="register()">Register</button>
+<button onclick="login()">Login</button>
 
-<div id="chatBox" style="display:none">
-  <h2>💬 Chat</h2>
-
-  <div id="messages"></div>
-
-  <br>
+<div id="chat" style="display:none">
+  <h3>Chat</h3>
+  <div id="msgs"></div>
   <input id="msg">
-  <button onclick="send()">Wyślij</button>
+  <button onclick="send()">Send</button>
 </div>
 
 <script>
-
-// ===== REGISTER
 async function register(){
-  await fetch("/register",{
+  const res = await fetch("/register",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body: JSON.stringify({
-      u: document.getElementById("u").value,
-      p: document.getElementById("p").value
+      u: u.value,
+      p: p.value
     })
   });
 
-  alert("✅ Zarejestrowano");
+  const data = await res.json();
+
+  alert("REGISTER: " + JSON.stringify(data));
 }
 
-// ===== LOGIN
 async function login(){
   const res = await fetch("/login",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body: JSON.stringify({
-      u: document.getElementById("u").value,
-      p: document.getElementById("p").value
+      u: u.value,
+      p: p.value
     })
   });
 
   const data = await res.json();
 
+  alert("LOGIN: " + JSON.stringify(data));
+
   if(data.ok){
-    document.getElementById("loginBox").style.display="none";
-    document.getElementById("chatBox").style.display="block";
-  } else {
-    alert("❌ Błędny login");
+    chat.style.display="block";
   }
 }
 
-// ===== CHAT
 async function send(){
-  const text = document.getElementById("msg").value;
-
   const res = await fetch("/chat",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({message:text})
+    body: JSON.stringify({message:msg.value})
   });
 
   const data = await res.json();
 
-  document.getElementById("messages").innerHTML += "<p>"+text+"</p>";
-  document.getElementById("messages").innerHTML += "<p>"+data.reply+"</p>";
+  msgs.innerHTML += "<p>"+msg.value+"</p>";
+  msgs.innerHTML += "<p>"+data.reply+"</p>";
 }
-
 </script>
 
 </body>
