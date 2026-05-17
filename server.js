@@ -3,36 +3,40 @@ const express = require("express");
 const app = express();
 app.use(express.json());
 
-// fallback (zawsze działa)
-function fallback(message) {
-  return "Fallback: " + message;
-}
-
-// strona
+// ✅ UI
 app.get("/", (req, res) => {
   res.send(`
   <html>
   <body style="background:#222;color:white;font-family:Arial;">
-    <div id="messages"></div>
-    <input id="msg"/>
+
+    <div id="messages" style="height:90vh;overflow:auto;"></div>
+
+    <input id="msg" style="width:80%" placeholder="Napisz coś..." />
     <button onclick="send()">Wyślij</button>
 
     <script>
+      const box = document.getElementById("messages");
+
       async function send() {
         const input = document.getElementById("msg");
-        const msg = input.value;
+        const text = input.value;
 
-        document.getElementById("messages").innerHTML += "<p>Ty: " + msg + "</p>";
+        if (!text) return;
+
+        box.innerHTML += "<p>Ty: " + text + "</p>";
 
         const res = await fetch("/chat", {
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({message: msg})
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({message:text})
         });
 
         const data = await res.json();
 
-        document.getElementById("messages").innerHTML += "<p>AI: " + data.reply + "</p>";
+        box.innerHTML += "<p>AI: " + data.reply + "</p>";
+        box.scrollTop = box.scrollHeight;
+
+        input.value = "";
       }
 
       document.getElementById("msg").addEventListener("keydown", function(e) {
@@ -42,12 +46,13 @@ app.get("/", (req, res) => {
         }
       });
     </script>
+
   </body>
   </html>
   `);
 });
 
-// ✅ DEBUG OPENROUTER
+// ✅ PRAWDZIWE AI (DZIAŁAJĄCY MODEL)
 app.post("/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -59,31 +64,35 @@ app.post("/chat", async (req, res) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "mistralai/mistral-7b-instruct",
-        messages: [{ role: "user", content: message }]
+        model: "openchat/openchat-3.5", // ✅ działa
+        messages: [
+          { role: "user", content: message }
+        ]
       })
     });
 
     const data = await response.json();
 
-    console.log("OPENROUTER:", data);
-
     if (data.error) {
-      return res.json({ reply: "ERROR: " + data.error.message });
+      return res.json({
+        reply: "ERROR: " + data.error.message
+      });
     }
 
-    const reply = data.choices?.[0]?.message?.content;
-
-    if (!reply) {
-      return res.json({ reply: "BRAK ODPOWIEDZI Z AI ❌" });
-    }
+    const reply =
+      data.choices?.[0]?.message?.content || "Brak odpowiedzi";
 
     res.json({ reply });
 
   } catch (err) {
     console.log(err);
-    res.json({ reply: "CRASH 💥" });
+    res.json({ reply: "Błąd AI 💥" });
   }
 });
 
-app.listen(process.env.PORT || 3000);
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("🚀 SERVER:", PORT);
+});
+``
