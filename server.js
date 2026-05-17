@@ -6,20 +6,31 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// ✅ Mongo bez blokowania
 let db = null;
-const client = new MongoClient(process.env.MONGO_URI);
 
-client.connect()
-  .then(() => {
+// ✅ STABILNE POŁĄCZENIE DO MONGO
+async function connectDB() {
+  try {
+    console.log("🔌 connecting DB...");
+
+    const client = new MongoClient(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000
+    });
+
+    await client.connect();
+
     db = client.db("chatapp");
-    console.log("✅ Mongo CONNECTED");
-  })
-  .catch(err => {
-    console.log("❌ Mongo error:", err.message);
-  });
 
-// ✅ FRONT (LOGIN + CHAT)
+    console.log("✅ Mongo CONNECTED");
+
+  } catch (err) {
+    console.log("❌ DB FAIL:", err.message);
+  }
+}
+
+connectDB();
+
+// ✅ FRONT
 app.get("/", (req, res) => {
   res.send(`
   <html>
@@ -36,13 +47,13 @@ app.get("/", (req, res) => {
   <div id="chat" style="display:none;margin-top:20px">
     <h3>Chat</h3>
     <div id="msgs"></div>
-    <input id="msg" placeholder="message">
+    <input id="msg">
     <button onclick="send()">Send</button>
   </div>
 
   <script>
   async function register(){
-    const r = await fetch("/register", {
+    const r = await fetch("/register",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body: JSON.stringify({u:u.value,p:p.value})
@@ -51,20 +62,18 @@ app.get("/", (req, res) => {
   }
 
   async function login(){
-    const r = await fetch("/login", {
+    const r = await fetch("/login",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body: JSON.stringify({u:u.value,p:p.value})
     });
     const d = await r.json();
     alert(JSON.stringify(d));
-    if(d.ok){
-      chat.style.display="block";
-    }
+    if(d.ok){ chat.style.display="block"; }
   }
 
   async function send(){
-    const r = await fetch("/chat", {
+    const r = await fetch("/chat",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body: JSON.stringify({message:msg.value})
@@ -84,6 +93,7 @@ app.post("/register", async (req, res) => {
   if (!db) return res.json({ ok:false });
 
   const { u, p } = req.body;
+
   await db.collection("users").insertOne({ u, p });
 
   res.json({ ok:true });
@@ -94,6 +104,7 @@ app.post("/login", async (req, res) => {
   if (!db) return res.json({ ok:false });
 
   const { u, p } = req.body;
+
   const user = await db.collection("users").findOne({ u, p });
 
   res.json({ ok: !!user });
@@ -108,3 +119,4 @@ app.post("/chat", (req, res) => {
 app.listen(PORT, "0.0.0.0", () => {
   console.log("🚀 SERVER RUNNING ON", PORT);
 });
+
