@@ -8,25 +8,27 @@ const PORT = process.env.PORT || 3000;
 
 let db = null;
 
-// 🔥 BEZ await — NIE blokujemy startu
-const client = new MongoClient(process.env.MONGO_URI);
+const client = new MongoClient(process.env.MONGO_URI, {
+  serverSelectionTimeoutMS: 3000
+});
 
+// 🔥 NIE BLOKUJE STARTU → NIE MA 502
 client.connect()
   .then(() => {
-    db = client.db("chatapp");
     console.log("✅ Mongo CONNECTED");
+    db = client.db("chatapp");
   })
   .catch(err => {
     console.log("❌ Mongo ERROR:");
-    console.log(err);
+    console.log(err.message);
   });
 
-// ✅ prosta odpowiedź żeby NIE było 502
+// ✅ ZAWSZE ODPOWIADA → Railway nie ubija appki
 app.get("/", (req, res) => {
-  res.send("✅ DZIAŁA");
+  res.send("✅ DZIAŁA BACKEND");
 });
 
-// ✅ TEST REGISTER
+// ✅ REGISTER
 app.post("/register", async (req, res) => {
   if (!db) return res.json({ ok:false });
 
@@ -37,8 +39,6 @@ app.post("/register", async (req, res) => {
   res.json({ ok:true });
 });
 
-// ✅ SERVER
 app.listen(PORT, "0.0.0.0", () => {
   console.log("🚀 SERVER RUNNING ON", PORT);
 });
-``
