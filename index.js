@@ -8,22 +8,35 @@ const PORT = process.env.PORT;
 // ✅ CZAS
 function getTime(){
   return new Date().toLocaleTimeString("pl-PL", {
-    timeZone: "Europe/Warsaw"
+    timeZone: "Europe/Warszawa" // poprawione
   });
 }
 
-// ✅ BOT
+// ✅ BOT SMART
 function generateReply(text){
   const t = text.toLowerCase();
 
+  // ✅ godzina
   if(t.includes("godzina")){
     return "🕒 Jest godzina: " + getTime();
   }
 
-  if(t.includes("hej")){
+  // ✅ przywitanie
+  if(t.includes("hej") || t.includes("cześć") || t.includes("czesc")){
     return "👋 Hej!";
   }
 
+  // ✅ stolica paryża
+  if(t.includes("stolica") && t.includes("paryz")){
+    return "🇫🇷 Stolica Francji to Paryż 😉";
+  }
+
+  // ✅ wiek
+  if(t.includes("ile masz lat")){
+    return "🤖 Nie mam lat 😄 jestem programem!";
+  }
+
+  // ✅ fallback
   return "🤖 Nie rozumiem 😄";
 }
 
@@ -42,9 +55,19 @@ app.get("/", (req, res) => {
 
   <script>
 
-  const input = document.getElementById("msg");
+  function setup(){
+    const input = document.getElementById("msg");
+
+    input.addEventListener("keydown", function(e){
+      if(e.key === "Enter"){
+        e.preventDefault();
+        send();
+      }
+    });
+  }
 
   async function send(){
+    const input = document.getElementById("msg");
     const text = input.value.trim();
     if(!text) return;
 
@@ -62,13 +85,7 @@ app.get("/", (req, res) => {
     input.value="";
   }
 
-  // ✅ ✅ ✅ ENTER FIX (NA 100%)
-  input.addEventListener("keydown", function(e){
-    if(e.key === "Enter"){
-      e.preventDefault();
-      send();
-    }
-  });
+  window.onload = setup;
 
   </script>
 
