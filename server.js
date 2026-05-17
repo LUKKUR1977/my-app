@@ -52,7 +52,7 @@ app.get("/", (req, res) => {
   `);
 });
 
-// ✅ PRAWDZIWE AI (DZIAŁAJĄCY MODEL)
+// ✅ PRAWDZIWE AI (PEWNY MODEL)
 app.post("/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -64,7 +64,7 @@ app.post("/chat", async (req, res) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "openchat/openchat-3.5", // ✅ działa
+        model: "meta-llama/llama-3-8b-instruct", // ✅ DZIAŁA
         messages: [
           { role: "user", content: message }
         ]
@@ -95,4 +95,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("🚀 SERVER:", PORT);
 });
-``
